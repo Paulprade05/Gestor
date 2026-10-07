@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Movimiento } from './types';
 import { useEstado } from './estado';
 import Ahorro from './components/Ahorro';
@@ -19,7 +19,11 @@ const PESTANAS: { id: Pestana; texto: string; icono: NombreIcono }[] = [
 ];
 
 export default function App() {
-  const { cargado, usuario, celebracion } = useEstado();
+  const { cargado, usuario, celebracion, ajustes } = useEstado();
+  // Modo privado: el CSS difumina los importes mientras <html> tenga la clase «privado».
+  useEffect(() => {
+    document.documentElement.classList.toggle('privado', !!ajustes.privado);
+  }, [ajustes.privado]);
   const [pestana, setPestana] = useState<Pestana>('inicio');
   // Las pestañas ya visitadas siguen montadas (ocultas): cambiar es instantáneo y conservan
   // su scroll y sus filtros, como en una app nativa.

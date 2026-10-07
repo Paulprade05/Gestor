@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { Candado } from './components/Bloqueo';
+import { Recuperacion } from './components/Recuperacion';
 import { ProveedorEstado } from './estado';
 import { iniciarAjustesIOS } from './lib/ios';
 import { iniciarSincronizacion } from './lib/sync';
@@ -8,9 +10,13 @@ import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ProveedorEstado>
-      <App />
-    </ProveedorEstado>
+    <Recuperacion>
+      <ProveedorEstado>
+        <Candado>
+          <App />
+        </Candado>
+      </ProveedorEstado>
+    </Recuperacion>
   </StrictMode>,
 );
 

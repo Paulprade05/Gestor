@@ -7,7 +7,8 @@ import { euros, porcentaje } from '../lib/formato';
 import { gastoPorDia, metaPrincipal, metasActivas, proximosRecurrentes, resumenDashboard, type GastoDia } from '../lib/presupuesto';
 import { TarjetaCierre } from './Ahorro';
 import { FilaMovimiento } from './FilaMovimiento';
-import { Anillo, Barra, Segmentado, Seccion } from './ui';
+import { consejos, prevision, racha, type Prevision } from '../lib/analisis';
+import { Anillo, Barra, Icono, Segmentado, Seccion } from './ui';
 
 /** Fuerza un recálculo al cambiar de día con la app abierta (o al volver a ella). */
 function useAhora(): Date {
@@ -35,10 +36,16 @@ interface Props {
 export default memo(Dashboard);
 
 function Dashboard({ onEditar, onVerTodo, onIrAhorro }: Props) {
-  const { usuario, limites, movimientos, metas, recurrentes, aportar } = useEstado();
+  const { usuario, limites, movimientos, metas, recurrentes, ajustes, aportar, guardarAjustes } = useEstado();
   const ahora = useAhora();
   const [periodo, setPeriodo] = useState<Periodo>('mensual');
   const r = useMemo(() => resumenDashboard(usuario!, limites, movimientos, metas, ahora), [usuario, limites, movimientos, metas, ahora]);
+  const prev = useMemo(() => prevision(usuario!, limites, movimientos, metas, recurrentes, ahora), [usuario, limites, movimientos, metas, recurrentes, ahora]);
+  const tips = useMemo(
+    () => consejos({ usuario: usuario!, limites, movs: movimientos, metas, recs: recurrentes, ahora }),
+    [usuario, limites, movimientos, metas, recurrentes, ahora],
+  );
+  const dias = useMemo(() => racha(movimientos, limites, usuario!, ahora), [movimientos, limites, usuario, ahora]);
   const semana = useMemo(() => gastoPorDia(movimientos, ahora), [movimientos, ahora]);
   const proximos = useMemo(() => proximosRecurrentes(recurrentes, ahora, 10).slice(0, 4), [recurrentes, ahora]);
 
@@ -55,7 +62,24 @@ function Dashboard({ onEditar, onVerTodo, onIrAhorro }: Props) {
   return (
     <div className="pantalla">
       <header className="cabecera-grande">
-        <p className="cabecera-fecha">{fecha}</p>
+        <div className="cabecera-fila">
+          <p className="cabecera-fecha">{fecha}</p>
+          <div className="cabecera-acciones">
+            {dias >= 2 && (
+              <span className="pill pill-racha" title="Días seguidos dentro de tu presupuesto diario">
+                🔥 {dias}
+              </span>
+            )}
+            <button
+              className="boton-icono boton-ojo"
+              onClick={() => void guardarAjustes({ ...ajustes, privado: !ajustes.privado })}
+              aria-label={ajustes.privado ? 'Mostrar importes' : 'Ocultar importes'}
+              aria-pressed={!!ajustes.privado}
+            >
+              <Icono nombre={ajustes.privado ? 'ojoCerrado' : 'ojo'} tam={22} />
+            </button>
+          </div>
+        </div>
         <h1>
           {saludo(ahora.getHours())}, {usuario!.nombre}
         </h1>
@@ -104,7 +128,20 @@ function Dashboard({ onEditar, onVerTodo, onIrAhorro }: Props) {
         </p>
       </section>
 
+      <TarjetaPrevision p={prev} mes={mes} />
+
       <TarjetaCierre />
+
+      {tips.length > 0 && (
+        <Seccion titulo="Consejos">
+          {tips.map((c) => (
+            <div className={`consejo consejo-${c.tono}`} key={c.id}>
+              <span className="consejo-icono">{c.icono}</span>
+              <p>{c.texto}</p>
+            </div>
+          ))}
+        </Seccion>
+      )}
 
       {/* ── Hucha principal ── */}
       {principal && r.meta && (
@@ -209,6 +246,54 @@ function Dashboard({ onEditar, onVerTodo, onIrAhorro }: Props) {
         ))}
       </Seccion>
     </div>
+  );
+}
+
+/** Cómo acabará el mes a este ritmo; se despliega para ver de dónde sale la cifra. */
+function TarjetaPrevision({ p, mes }: { p: Prevision; mes: string }) {
+  const [abierta, setAbierta] = useState(false);
+  const positivo = p.saldoFinal >= 0;
+  const fila = (texto: string, valor: number, signo: '+' | '−', detalle?: string) => (
+    <div className="prevision-fila">
+      <span>
+        {texto}
+        {detalle && <small> {detalle}</small>}
+      </span>
+      <strong className="importe">
+        {signo}
+        {euros(Math.round(valor))}
+      </strong>
+    </div>
+  );
+  return (
+    <section className="tarjeta prevision">
+      <button className="prevision-cabecera" onClick={() => setAbierta((a) => !a)} aria-expanded={abierta}>
+        <span className="prevision-icono">{positivo ? '🔮' : '⚠️'}</span>
+        <span className="fila-texto">
+          Previsión a fin de {mes}
+          <small>{positivo ? 'Te quedará, tras gastos y huchas' : 'A este ritmo te faltará'}</small>
+        </span>
+        <strong className={`prevision-cifra ${positivo ? 'texto-verde' : 'texto-rojo'}`}>
+          {positivo ? '+' : '−'}
+          {euros(Math.abs(Math.round(p.saldoFinal)))}
+        </strong>
+        <span className={`prevision-flecha ${abierta ? 'abierta' : ''}`}>
+          <Icono nombre="chevron" tam={16} />
+        </span>
+      </button>
+      {abierta && (
+        <div className="prevision-detalle">
+          {fila('Ingresos del mes', p.ingresos, '+')}
+          {fila('Ya gastado', p.gastado, '−')}
+          {p.fijosPendientes > 0 && fila('Fijos por llegar', p.fijosPendientes, '−')}
+          {fila('Día a día hasta fin de mes', p.variableProyectado, '−', `(≈ ${euros(Math.round(p.ritmoDiario))}/día × ${p.diasQuedan})`)}
+          {fila('A tus huchas', p.ahorroPrevisto, '−')}
+          {p.ritmoParaCuadrar !== null && (
+            <p className="prevision-consejo">Para acabar el mes en 0, gasta como mucho {euros(Math.floor(p.ritmoParaCuadrar))} al día en el día a día.</p>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

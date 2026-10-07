@@ -16,6 +16,7 @@ import type {
   RecurrenteNuevo,
   Usuario,
 } from './types';
+import { normalizarMeta, type DatosCopia } from './lib/copia';
 import { almacen, type ClaveKV } from './lib/db';
 import { categoria, establecerCategorias } from './lib/categorias';
 import { aISO, deISO, finMes, hoyISO, mesAnio, sumarMeses } from './lib/fechas';
@@ -79,6 +80,9 @@ interface Contexto extends Datos {
   resolverCierre(mes: string, metaId: string | null, importe: number): Promise<void>;
 
   guardarAjustes(a: Ajustes): Promise<void>;
+  actualizarUsuario(cambios: Partial<Pick<Usuario, 'nombre' | 'ingresosNetosMensuales'>>): Promise<void>;
+  /** Sustituye todos los datos por los de una copia (conserva el código y la sincronización del dispositivo). */
+  restaurarCopia(d: DatosCopia): Promise<void>;
   borrarTodo(): Promise<void>;
   notificar(texto: string, nivel?: NivelAlerta, opciones?: OpcionesToast): void;
   cerrarToast(id: string): void;
@@ -166,21 +170,26 @@ export function ProveedorEstado({ children }: { children: ReactNode }) {
         db.get<ConfigCategorias>('categorias'),
         db.get<Ajustes>('ajustes'),
       ]);
-      let listaMetas = metas ?? [];
+      // Huchas completas aunque los datos guardados tengan huecos (versiones antiguas, copias editadas).
+      let listaMetas = (Array.isArray(metas) ? metas : []).filter((m) => m && typeof m === 'object').map((m) => normalizarMeta(m as unknown as Record<string, unknown>));
       if (!metas && metaV1) {
         // v1 tenía una sola meta: pasa a ser la hucha principal.
-        listaMetas = [{ ...metaV1, emoji: metaV1.emoji ?? '🐷', principal: true }];
+        listaMetas = [normalizarMeta(metaV1 as unknown as Record<string, unknown>, true)];
         await db.set('metas', listaMetas);
       }
+      // Datos guardados con forma inesperada → valores vacíos, en vez de romper la app.
+      const comoLista = <T,>(x: unknown): T[] => (Array.isArray(x) ? x : []);
+      const cfgCategorias =
+        categorias && Array.isArray(categorias.personalizadas) && Array.isArray(categorias.ocultas) ? categorias : CATEGORIAS_VACIAS;
       actualizar({
         usuario: usuario ?? null,
         diagnostico: diagnostico ?? null,
         metas: listaMetas,
-        limites: limites ?? [],
-        movimientos: ordenar(movimientos.map((m) => ({ ...m, tipo: m.tipo ?? 'gasto' }))),
-        recurrentes: recurrentes ?? [],
-        categorias: categorias ?? CATEGORIAS_VACIAS,
-        ajustes: ajustes ?? {},
+        limites: comoLista<Limite>(limites),
+        movimientos: ordenar(comoLista<Movimiento>(movimientos).map((m) => ({ ...m, tipo: m.tipo ?? 'gasto' }))),
+        recurrentes: comoLista<Recurrente>(recurrentes),
+        categorias: cfgCategorias,
+        ajustes: ajustes && typeof ajustes === 'object' ? ajustes : {},
       });
       setCargado(true);
       performance.mark?.('hucha:datos-cargados');
@@ -489,6 +498,34 @@ export function ProveedorEstado({ children }: { children: ReactNode }) {
       async guardarAjustes(ajustes) {
         await guardarKV('ajustes', ajustes);
         actualizar({ ajustes });
+      },
+
+      async actualizarUsuario(cambios) {
+        const u = ref.current.usuario;
+        if (!u) return;
+        const usuario = { ...u, ...cambios, actualizadoEn: ahoraISO() };
+        await guardarKV('usuario', usuario);
+        actualizar({ usuario });
+      },
+
+      async restaurarCopia(d) {
+        const { bloqueo, urlSincronizacion } = ref.current.ajustes;
+        const ajustes: Ajustes = { ...d.ajustes, bloqueo, urlSincronizacion };
+        const db = await almacen();
+        await db.borrarTodo();
+        await Promise.all([
+          db.set('usuario', d.usuario),
+          db.set('diagnostico', d.diagnostico ?? undefined),
+          db.set('metas', d.metas),
+          db.set('limites', d.limites),
+          db.set('recurrentes', d.recurrentes),
+          db.set('categorias', d.categorias),
+          db.set('ajustes', ajustes),
+          db.guardarMovimientos(d.movimientos),
+        ]);
+        actualizar({ ...d, movimientos: ordenar(d.movimientos), ajustes });
+        notificar(`Copia restaurada: ${d.movimientos.length} movimientos`, 'ok', { icono: '💾' });
+        await revisarRecurrentes();
       },
 
       async borrarTodo() {

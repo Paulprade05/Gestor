@@ -229,4 +229,13 @@ export interface Ajustes {
   redondeo?: boolean;
   /** Meses ('YYYY-MM') cuyo cierre ya se ha revisado. */
   cierres?: string[];
+  /** Ocultar importes en pantalla (para usar la app delante de otros). */
+  privado?: boolean;
+  /** Bloqueo con código. Solo se guarda el hash del código (SHA-256 con sal). */
+  bloqueo?: {
+    hash: string;
+    sal: string;
+    /** Minutos en segundo plano tras los que se vuelve a pedir (0 = siempre). */
+    minutos: number;
+  };
 }

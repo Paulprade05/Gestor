@@ -50,7 +50,12 @@ npm run icons      # regenera los iconos PNG
 - **Huchas:** varias metas con emoji, aportar y retirar, una principal (inicio, redondeo y sugerencias), archivar, ideas con fondo de emergencia calculado (3 meses de gastos fijos).
 - **Ahorro automático:** redondeo de cada gasto al euro hacia la hucha principal.
 - **Cierre de mes:** si el mes anterior sobró dinero (ingresos − gastos − apartado), propone pasarlo a la hucha principal con fecha de ese mes.
-- **Exportar:** CSV para Excel (`;` y coma decimal) y copia completa en JSON, con la hoja de compartir de iOS.
+- **Exportar y restaurar:** CSV para Excel (`;` y coma decimal) y copia completa en JSON con la hoja de compartir de iOS; la copia se puede restaurar desde Ajustes ([src/lib/copia.ts](src/lib/copia.ts) valida y completa los datos, también de copias v1).
+- **Previsión de fin de mes** ([src/lib/analisis.ts](src/lib/analisis.ts)): ingresos (con los fijos por llegar) − gastado − fijos pendientes − día a día proyectado − huchas. El ritmo diario mezcla el real con el presupuesto los primeros 10 días y no proyecta gastos extraordinarios (> 100 € o 5 × presupuesto diario). Si sale negativo, dice cuánto gastar al día para cuadrar.
+- **Consejos automáticos** (máx. 3): previsión negativa, categoría disparada frente a los mismos días del mes anterior, gastos sin límite, racha, gastos hormiga, ingresos extra sin ahorrar, días sin apuntar.
+- **Racha 🔥** de días dentro del presupuesto diario, **evolución** de 6 meses y **calendario** de gasto diario en Análisis.
+- **Privacidad:** bloqueo con código de 4 cifras (solo se guarda SHA-256 con sal; «Siempre» bloquea al salir para que el selector de apps no muestre tus cuentas) y modo para difuminar importes. Es una barrera de privacidad, no cifrado.
+- **Perfil** editable (nombre e ingresos previstos) y **pantalla de recuperación** si algo falla al pintar (recargar, guardar los datos o empezar de cero).
 - **Migración:** la base de datos v1 (`gastos`, una sola `meta`) se convierte sola a v2 (`movimientos`, lista de `metas`).
 
 ## Detalles iOS
@@ -64,6 +69,8 @@ npm run icons      # regenera los iconos PNG
 - Background Sync no existe en Safari: la cola se envía al volver la conexión o al volver a la app.
 - Teclado de iOS: [src/lib/ios.ts](src/lib/ios.ts) lee `visualViewport` y publica `--teclado`; las hojas se apoyan encima del teclado, se ocultan la tab bar y el teclado numérico propio, y el campo enfocado se centra.
 - Pestañas montadas (ocultas al cambiar): cambio instantáneo, conservan scroll y filtros; tocar la pestaña activa sube al principio.
+- **Ancho fijo de diseño, 390 pt** (script en [index.html](index.html)): en pantallas más estrechas (iPhone con «Zoom de pantalla» ampliado = 320 pt, SE, mini) la app se dibuja a 390 pt y iOS la escala para ocupar el ancho exacto; se ve igual que en un iPhone 12 sin depender de esos ajustes. En pantallas más anchas (Plus/Pro Max) usa su ancho real.
+- **Respaldo adaptable** (final de [src/styles.css](src/styles.css)): si aun así el ancho útil baja (tamaño de texto de Safari ampliado), cifras con `clamp()`, cajas que pasan a otra fila en vez de recortar, y ajustes para ≤ 360 pt. Comprobado de 320 a 430 pt.
 - Revisado a 390×844 (iPhone 12/13/14) con zonas seguras de 47/34 pt y a 390×664 (Safari con barras): nada fuera de pantalla, sin solapes, controles ≥ 32 pt, campos ≥ 16 px. Con 1.500 movimientos carga en ~160 ms y cada interacción tarda menos de 15 ms.
 - Requiere iOS 16.2 o superior (`color-mix`, `inert`).
 

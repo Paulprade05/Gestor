@@ -5,8 +5,9 @@ import { totalMensual } from '../lib/recurrentes';
 import Ajustes from './Ajustes';
 import Categorias from './Categorias';
 import Presupuesto from './Presupuesto';
+import Hoja from './Hoja';
 import Recurrentes from './Recurrentes';
-import { Icono, Seccion } from './ui';
+import { CampoImporte, Icono, Seccion } from './ui';
 
 type Sub = 'presupuesto' | 'recurrentes' | 'categorias' | 'ajustes';
 
@@ -22,6 +23,7 @@ export default memo(Mas);
 function Mas() {
   const { usuario, limites, recurrentes, categorias } = useEstado();
   const [sub, setSub] = useState<Sub | null>(null);
+  const [perfilAbierto, setPerfilAbierto] = useState(false);
 
   if (sub) {
     return (
@@ -62,13 +64,14 @@ function Mas() {
         <h1>Más</h1>
       </header>
 
-      <div className="tarjeta perfil">
+      <button className="tarjeta perfil" onClick={() => setPerfilAbierto(true)}>
         <span className="perfil-avatar">{usuario?.nombre.charAt(0).toUpperCase()}</span>
         <div>
           <strong>{usuario?.nombre}</strong>
-          <small>Ingresos habituales previstos: {euros(usuario?.ingresosNetosMensuales ?? 0)}/mes</small>
+          <small className="importe">Ingresos habituales previstos: {euros(usuario?.ingresosNetosMensuales ?? 0)}/mes</small>
         </div>
-      </div>
+        <Icono nombre="chevron" tam={18} />
+      </button>
 
       <Seccion>
         {opciones.map((o) => (
@@ -82,6 +85,48 @@ function Mas() {
           </button>
         ))}
       </Seccion>
+
+      <Hoja abierta={perfilAbierto} onCerrar={() => setPerfilAbierto(false)} titulo="Tu perfil" etiqueta="Tu perfil">
+        <FormularioPerfil onCerrar={() => setPerfilAbierto(false)} />
+      </Hoja>
+    </div>
+  );
+}
+
+function FormularioPerfil({ onCerrar }: { onCerrar(): void }) {
+  const { usuario, actualizarUsuario, repetirOnboarding, notificar } = useEstado();
+  const [nombre, setNombre] = useState(usuario?.nombre ?? '');
+  const [ingresos, setIngresos] = useState(usuario?.ingresosNetosMensuales ?? 0);
+  return (
+    <div className="formulario formulario-hoja">
+      <label className="campo">
+        <span className="campo-etiqueta">Nombre</span>
+        <input type="text" autoComplete="given-name" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+      </label>
+      <CampoImporte id="perfil-ingresos" etiqueta="Ingresos habituales previstos al mes" valor={ingresos} onCambio={setIngresos} />
+      <p className="hoja-resumen">Se usan mientras no apuntes la nómina del mes. Si cambian mucho, conviene repetir el diagnóstico para recalcular el plan.</p>
+      <button
+        className="boton-principal"
+        disabled={!nombre.trim() || !(ingresos > 0)}
+        onClick={async () => {
+          await actualizarUsuario({ nombre: nombre.trim(), ingresosNetosMensuales: ingresos });
+          notificar('Perfil actualizado');
+          onCerrar();
+        }}
+      >
+        Guardar
+      </button>
+      <div className="botonera botonera-centrada">
+        <button
+          className="boton-texto"
+          onClick={() => {
+            onCerrar();
+            void repetirOnboarding();
+          }}
+        >
+          Repetir diagnóstico
+        </button>
+      </div>
     </div>
   );
 }

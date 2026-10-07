@@ -3,30 +3,15 @@ import { useEstado } from '../estado';
 import { categoria } from '../lib/categorias';
 import { almacen } from '../lib/db';
 import { hoyISO } from '../lib/fechas';
+import { compartirArchivo } from '../lib/archivos';
+import { crearCopia, leerCopia } from '../lib/copia';
 import { sincronizarAhora } from '../lib/sync';
-import { Seccion } from './ui';
+import { HojaCodigo } from './Bloqueo';
+import { Interruptor, Seccion, Segmentado } from './ui';
 
 const esIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const esStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-
-/** En iPhone abre la hoja de compartir (Guardar en Archivos, AirDrop, Mail…); si no, descarga. */
-async function compartirArchivo(nombre: string, contenido: string, tipo: string) {
-  const archivo = new File([contenido], nombre, { type: tipo });
-  if (navigator.canShare?.({ files: [archivo] })) {
-    try {
-      await navigator.share({ files: [archivo], title: nombre });
-      return;
-    } catch (e) {
-      if ((e as Error).name === 'AbortError') return;
-    }
-  }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(archivo);
-  a.download = nombre;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
 
 export default function Ajustes() {
   const s = useEstado();
@@ -56,18 +41,34 @@ export default function Ajustes() {
   };
 
   const exportarJSON = () => {
-    const datos = {
-      exportado: new Date().toISOString(),
+    if (!s.usuario) return;
+    const copia = crearCopia({
       usuario: s.usuario,
       diagnostico: s.diagnostico,
       metas: s.metas,
       limites: s.limites,
       recurrentes: s.recurrentes,
       categorias: s.categorias,
+      ajustes: s.ajustes,
       movimientos: s.movimientos,
-    };
-    void compartirArchivo(`hucha-copia-${hoyISO()}.json`, JSON.stringify(datos, null, 2), 'application/json');
+    });
+    void compartirArchivo(`hucha-copia-${hoyISO()}.json`, JSON.stringify(copia, null, 2), 'application/json');
   };
+
+  const restaurar = async (archivo: File) => {
+    try {
+      const d = leerCopia(await archivo.text());
+      const ok = window.confirm(
+        `Se sustituirán todos tus datos actuales por los de la copia: ${d.movimientos.length} movimientos y ${d.metas.length} huchas de ${d.usuario.nombre}. ¿Continuar?`,
+      );
+      if (ok) await s.restaurarCopia(d);
+    } catch (e) {
+      s.notificar((e as Error).message, 'excedido');
+    }
+  };
+
+  const [hojaCodigo, setHojaCodigo] = useState<'crear' | 'verificar' | null>(null);
+  const bloqueo = s.ajustes.bloqueo;
 
   return (
     <div className="pantalla">
@@ -85,7 +86,41 @@ export default function Ajustes() {
         </Seccion>
       )}
 
-      <Seccion titulo="Exportar" pie={`${s.movimientos.length} movimientos guardados en este dispositivo.`}>
+      <Seccion
+        titulo="Privacidad"
+        pie="El código evita que otros vean tus cuentas si cogen el móvil. No cifra los datos: guarda también una copia de seguridad."
+      >
+        <div className="fila fila-interruptor">
+          <span>
+            🔒 Bloqueo con código
+            <small>Se pide al abrir la app</small>
+          </span>
+          <Interruptor activo={!!bloqueo} onCambio={(v) => setHojaCodigo(v ? 'crear' : 'verificar')} etiqueta="Bloqueo con código" />
+        </div>
+        {bloqueo && (
+          <div className="fila fila-interruptor">
+            <span>Pedirlo al volver</span>
+            <Segmentado
+              opciones={[
+                { valor: '0', texto: 'Siempre' },
+                { valor: '1', texto: '1 min' },
+                { valor: '5', texto: '5 min' },
+              ]}
+              valor={String(bloqueo.minutos)}
+              onCambio={(v) => void s.guardarAjustes({ ...s.ajustes, bloqueo: { ...bloqueo, minutos: Number(v) } })}
+            />
+          </div>
+        )}
+        <div className="fila fila-interruptor">
+          <span>
+            🙈 Ocultar importes
+            <small>También con el ojo del inicio</small>
+          </span>
+          <Interruptor activo={!!s.ajustes.privado} onCambio={(v) => void s.guardarAjustes({ ...s.ajustes, privado: v })} etiqueta="Ocultar importes" />
+        </div>
+      </Seccion>
+
+      <Seccion titulo="Copia de seguridad y exportar" pie={`${s.movimientos.length} movimientos guardados en este dispositivo.`}>
         <button className="fila fila-boton" onClick={exportarCSV}>
           <span className="fila-icono">📊</span>
           <span className="fila-texto">
@@ -96,10 +131,27 @@ export default function Ajustes() {
         <button className="fila fila-boton" onClick={exportarJSON}>
           <span className="fila-icono">💾</span>
           <span className="fila-texto">
-            Copia de seguridad
+            Guardar copia de seguridad
             <small>Todo: huchas, límites, fijos, categorías y movimientos (JSON)</small>
           </span>
         </button>
+        <label className="fila fila-boton">
+          <span className="fila-icono">♻️</span>
+          <span className="fila-texto">
+            Restaurar una copia
+            <small>Sustituye los datos de este dispositivo por los de la copia</small>
+          </span>
+          <input
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) void restaurar(f);
+            }}
+          />
+        </label>
       </Seccion>
 
       <Seccion
@@ -160,6 +212,22 @@ export default function Ajustes() {
           <span className="fila-texto texto-rojo">Borrar todos los datos</span>
         </button>
       </Seccion>
+
+      <HojaCodigo
+        modo={hojaCodigo}
+        onCerrar={() => setHojaCodigo(null)}
+        onHecho={async (cfg) => {
+          const modo = hojaCodigo;
+          setHojaCodigo(null);
+          if (modo === 'crear' && cfg) {
+            await s.guardarAjustes({ ...s.ajustes, bloqueo: { ...cfg, minutos: 1 } });
+            s.notificar('Bloqueo activado', 'ok', { icono: '🔒' });
+          } else if (modo === 'verificar') {
+            await s.guardarAjustes({ ...s.ajustes, bloqueo: undefined });
+            s.notificar('Bloqueo desactivado', 'ok', { icono: '🔓' });
+          }
+        }}
+      />
     </div>
   );
 }

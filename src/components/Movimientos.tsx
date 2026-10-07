@@ -4,6 +4,7 @@ import { useEstado } from '../estado';
 import { categoria } from '../lib/categorias';
 import { aISO, diasDelMes, etiquetaDia, finMes, inicioMes, mesAnio } from '../lib/fechas';
 import { centimos, euros, porcentaje } from '../lib/formato';
+import { calendarioMes, evolucionMensual, presupuestoDiario, type DiaCalendario } from '../lib/analisis';
 import { comparativaMensual, ingresosDelMes, totalEntre, totalPorCategoria } from '../lib/presupuesto';
 import { FilaMovimiento } from './FilaMovimiento';
 import { Icono, Segmentado } from './ui';
@@ -197,6 +198,101 @@ function Movimientos({ onEditar }: { onEditar(m: Movimiento): void }) {
   );
 }
 
+/** Ingresos y gastos de los últimos 6 meses (desde que se usa la app). */
+function Evolucion() {
+  const { movimientos, metas, usuario } = useEstado();
+  const meses = useMemo(() => (usuario ? evolucionMensual(movimientos, metas, usuario) : []), [movimientos, metas, usuario]);
+  if (meses.length < 2) return null;
+  const max = Math.max(1, ...meses.flatMap((m) => [m.ingresos, m.gastos]));
+  const total = meses.reduce((s, m) => ({ ingresos: s.ingresos + m.ingresos, gastos: s.gastos + m.gastos, ahorrado: s.ahorrado + m.ahorrado }), { ingresos: 0, gastos: 0, ahorrado: 0 });
+  const balanceMedio = (total.ingresos - total.gastos) / meses.length;
+
+  return (
+    <section className="seccion">
+      <div className="seccion-cabecera">
+        <h2>Evolución</h2>
+      </div>
+      <div className="tarjeta evolucion">
+        <div className="evolucion-zona">
+          {meses.map((m) => (
+            <div className="evolucion-mes" key={m.mes} aria-label={`${m.etiqueta}: ingresos ${euros(m.ingresos)}, gastos ${euros(m.gastos)}`}>
+              <div className="evolucion-barras">
+                <div className="evo-ingresos" style={{ height: `${(m.ingresos / max) * 100}%` }} />
+                <div className={`evo-gastos ${m.gastos > m.ingresos ? 'excedido' : ''}`} style={{ height: `${(m.gastos / max) * 100}%` }} />
+              </div>
+              <span>{m.etiqueta}</span>
+            </div>
+          ))}
+        </div>
+        <div className="evolucion-leyenda">
+          <span>
+            <i className="evo-ingresos" />
+            Ingresos
+          </span>
+          <span>
+            <i className="evo-gastos" />
+            Gastos
+          </span>
+        </div>
+        <p className="grafico-pie importe">
+          En {meses.length} meses te ha quedado una media de {euros(Math.round(balanceMedio))}/mes y has apartado {euros(Math.round(total.ahorrado))} a tus huchas.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+/** Calendario del mes con el gasto del día a día de cada día frente al presupuesto diario. */
+function Calendario({ mes }: { mes: Date }) {
+  const { movimientos, limites } = useEstado();
+  const semanas = useMemo(() => calendarioMes(movimientos, limites, mes), [movimientos, limites, mes]);
+  const [sel, setSel] = useState<DiaCalendario | null>(null);
+  const hoy = aISO(new Date());
+  const tope = presupuestoDiario(limites, mes);
+
+  return (
+    <section className="seccion">
+      <div className="seccion-cabecera">
+        <h2>Calendario</h2>
+        {tope > 0 && <span className="apagado importe">Presupuesto {euros(Math.round(tope))}/día</span>}
+      </div>
+      <div className="tarjeta calendario">
+        <div className="calendario-fila calendario-cabecera">
+          {DIAS_SEMANA.map((d) => (
+            <span key={d}>{d}</span>
+          ))}
+        </div>
+        {semanas.map((s, i) => (
+          <div className="calendario-fila" key={i}>
+            {s.map((c, j) =>
+              c ? (
+                <button
+                  key={c.fecha}
+                  className={`cal-dia nivel-${c.nivel} ${c.fecha === hoy ? 'hoy' : ''} ${sel?.fecha === c.fecha ? 'sel' : ''}`}
+                  disabled={c.futuro}
+                  onClick={() => setSel(c)}
+                  aria-label={`${c.dia}: ${euros(c.total)}`}
+                >
+                  {c.dia}
+                </button>
+              ) : (
+                <span key={`v${j}`} />
+              ),
+            )}
+          </div>
+        ))}
+        <p className="grafico-pie importe">
+          {sel
+            ? `${etiquetaDia(sel.fecha)}: ${euros(sel.variable)} en el día a día${sel.total > sel.variable ? ` + ${euros(centimos(sel.total - sel.variable))} en fijos` : ''} · ${sel.movimientos} ${sel.movimientos === 1 ? 'gasto' : 'gastos'}`
+            : 'Toca un día para ver lo que gastaste. Rosa: dentro de tu presupuesto diario; naranja y rojo: por encima.'}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /** Comparativa por categoría con el mes anterior. */
 function Analisis({ movimientos, mes }: { movimientos: Movimiento[]; mes: Date }) {
   const filas = useMemo(() => comparativaMensual(movimientos, mes, 'gasto'), [movimientos, mes]);
@@ -241,6 +337,9 @@ function Analisis({ movimientos, mes }: { movimientos: Movimiento[]; mes: Date }
         </div>
         {esMesActual && <p className="seccion-pie">El mes actual va por el día {diasTranscurridos}; se compara con {mesAnterior} completo.</p>}
       </section>
+
+      <Evolucion />
+      <Calendario mes={mes} />
 
       <section className="seccion">
         <div className="seccion-cabecera">

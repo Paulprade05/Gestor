@@ -4,10 +4,26 @@
     <meta charset="UTF-8" />
     <!--
       viewport-fit=cover: el contenido ocupa toda la pantalla (bajo el notch / Dynamic Island)
-      y se protege con env(safe-area-inset-*). No se usa maximum-scale/user-scalable=no
-      (accesibilidad): el zoom al enfocar inputs se evita con font-size >= 16px en CSS.
+      y se protege con env(safe-area-inset-*). El zoom al enfocar inputs se evita con font-size >= 16px.
     -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta id="viewport" name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <script>
+      // Ancho fijo de diseño: 390 pt (iPhone 12/13/14). En pantallas más estrechas —iPhone con
+      // «Zoom de pantalla» en modo ampliado (320 pt), iPhone SE o mini— la app se dibuja a 390 pt
+      // y iOS la escala para ocupar el ancho exacto: se ve igual que en un iPhone 12, sin depender
+      // de esos ajustes. maximum-scale = escala evita que iOS haga zoom al enfocar un campo.
+      (function () {
+        var DISENO = 390;
+        var ancho = Math.min(screen.width, screen.height);
+        if (ancho > 0 && ancho < DISENO) {
+          var escala = (ancho / DISENO).toFixed(4);
+          document.getElementById('viewport').setAttribute(
+            'content',
+            'width=' + DISENO + ', initial-scale=' + escala + ', minimum-scale=' + escala + ', maximum-scale=' + escala + ', viewport-fit=cover',
+          );
+        }
+      })();
+    </script>
     <!-- Tema claro siempre (también con el iPhone en modo oscuro) -->
     <meta name="color-scheme" content="light only" />
     <meta name="theme-color" content="#fff5f8" />

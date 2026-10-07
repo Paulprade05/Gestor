@@ -1,6 +1,6 @@
 /* Service worker de Hucha: app shell offline + sincronización en segundo plano. */
 // Subir al publicar cambios en public/ (iconos, manifest): limpia la caché anterior.
-const VERSION = 'hucha-v3';
+const VERSION = 'hucha-v5';
 const PRECACHE = [
   '/',
   '/index.html',

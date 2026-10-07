@@ -1558,6 +1558,15 @@ p {
   margin: 10px 0 8px;
   flex: none;
 }
+/* Fechas y «Cada mes» siempre en una sola fila (desplazable si no cabe). */
+.chips-compactos {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chips-compactos::-webkit-scrollbar {
+  display: none;
+}
 .chips-compactos .chip {
   min-height: 34px;
   font-size: 14px;
@@ -2225,4 +2234,561 @@ p {
   .confeti {
     display: none;
   }
+}
+
+/* ─── Adaptable (320–430 pt de ancho) ──────────────────────────────────────────
+   En iPhone el ancho de diseño se fija a 390 pt (ver index.html). Estas reglas son la red de
+   seguridad cuando aun así el ancho útil es menor (p. ej. tamaño de texto de Safari ampliado)
+   o cuando la tipografía real de iOS (SF Pro Rounded, emojis de Apple) ocupa más. */
+
+/* Cifras y títulos grandes: escalan con el ancho y nunca pasan de su tamaño de diseño. */
+.cabecera-grande h1 {
+  font-size: clamp(26px, 8.2vw, 32px);
+  overflow-wrap: anywhere;
+}
+.hero-cifra {
+  font-size: clamp(34px, 11.8vw, 46px);
+}
+.hero-cifra-media {
+  font-size: clamp(24px, 7.7vw, 30px);
+}
+.resultado-cifra {
+  font-size: clamp(36px, 12.3vw, 48px);
+}
+.registro-importe {
+  font-size: clamp(40px, 14.9vw, 58px);
+}
+.onb-cuerpo h1 {
+  font-size: clamp(24px, 7.7vw, 30px);
+}
+.meta-cifras strong {
+  font-size: clamp(18px, 5.6vw, 22px);
+}
+
+/* Importes y etiquetas que no deben partirse; textos de usuario largos que sí. */
+.fila-valor,
+.limite-cifras,
+.pill,
+.grafico-valor {
+  white-space: nowrap;
+}
+.fila-texto,
+.meta-titulo,
+.fila-interruptor > span,
+.comparativa-cuerpo,
+.cierre-titulo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Cajas de cifras: si no caben en una fila pasan a la siguiente, en vez de recortar el número. */
+.hero-flujo,
+.estadisticas {
+  flex-wrap: wrap;
+}
+.hero-flujo span,
+.estadisticas > div {
+  flex: 1 1 auto;
+  min-width: max-content; /* la caja mide al menos lo que su número */
+}
+.hero-flujo strong,
+.estadisticas strong {
+  overflow: visible;
+  text-overflow: clip;
+  font-size: clamp(14px, 4.1vw, 16px);
+}
+
+/* Cabecera de las hojas: «Cancelar» y la acción no se comprimen; el título se recorta. */
+.hoja-cabecera {
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+  gap: 4px;
+}
+.hoja-titulo {
+  max-width: none;
+  min-width: 0;
+}
+
+/* Tab bar: cada texto en una línea. */
+.tabbar-boton {
+  min-width: 0;
+}
+.tabbar-boton span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tabla de límites con columnas proporcionales. */
+.tabla-limites-cabecera,
+.tabla-limites-fila {
+  grid-template-columns: minmax(0, 1fr) minmax(84px, 27%) minmax(76px, 24%);
+}
+.tabla-limites-fila > span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.botonera {
+  flex-wrap: wrap;
+}
+
+/* Ancho útil estrecho (≤ 360 pt). */
+@media (max-width: 360px) {
+  .pantalla {
+    padding: 0 12px;
+  }
+  .fila {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .hero {
+    padding: 18px 16px 16px;
+  }
+  .hero-diario {
+    gap: 12px;
+    padding: 12px;
+  }
+  .registro-categorias .registro-cat {
+    flex-basis: 70px;
+  }
+  .grafico-zona,
+  .grafico-dias {
+    gap: 6px;
+  }
+  .tabla-limites {
+    padding: 8px 12px 0;
+  }
+  .estadisticas {
+    margin: 0 10px;
+  }
+  .chips-filtro {
+    margin: 12px -12px 0;
+    padding: 0 12px;
+  }
+  .onb-cuerpo {
+    padding: 12px 16px 20px;
+  }
+}
+
+/* ─── Cabecera del inicio: racha y ocultar importes ───────────────────────── */
+
+.cabecera-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+}
+.cabecera-acciones {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: -8px;
+}
+.pill-racha {
+  background: #fff0db;
+  color: #c25e00;
+  font-size: 13px;
+}
+.boton-ojo {
+  width: 40px;
+  height: 40px;
+  color: var(--rosa-texto);
+}
+
+/* ─── Previsión y consejos ────────────────────────────────────────────────── */
+
+.prevision {
+  margin-top: 18px;
+}
+.prevision-cabecera {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  text-align: left;
+}
+.prevision-icono {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  background: var(--rosa-suave);
+  flex: none;
+}
+.prevision-cifra {
+  font-family: var(--fuente-redonda);
+  font-size: 19px;
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.prevision-flecha {
+  color: var(--texto-3);
+  transition: transform 0.25s var(--curva-ios);
+}
+.prevision-flecha.abierta {
+  transform: rotate(90deg);
+}
+.prevision-detalle {
+  padding: 0 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--separador);
+  padding-top: 12px;
+}
+.prevision-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+}
+.prevision-fila small {
+  color: var(--texto-2);
+  font-size: 12px;
+}
+.prevision-fila strong {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.prevision-consejo {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff0db;
+  color: #9a4b00;
+  font-size: 14px;
+}
+
+.consejo {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 13px 16px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.consejo + .consejo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 58px;
+  right: 0;
+  border-top: 1px solid var(--separador);
+}
+.consejo-icono {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  flex: none;
+  background: var(--relleno);
+}
+.consejo-aviso .consejo-icono {
+  background: #fff0db;
+}
+.consejo-bien .consejo-icono {
+  background: #e3f6ec;
+}
+.consejo p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ─── Evolución y calendario ──────────────────────────────────────────────── */
+
+.evolucion {
+  padding: 16px 16px 14px;
+}
+.evolucion-zona {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 140px;
+}
+.evolucion-mes {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.evolucion-mes > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-2);
+}
+.evolucion-barras {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+}
+.evolucion-barras div {
+  width: 42%;
+  max-width: 16px;
+  min-height: 2px;
+  border-radius: 6px 6px 3px 3px;
+  transition: height 0.6s var(--curva-ios);
+}
+.evo-ingresos {
+  background: #7fd4a8;
+}
+.evo-gastos {
+  background: var(--rosa-claro);
+}
+.evo-gastos.excedido {
+  background: #ff9a8a;
+}
+.evolucion-leyenda {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--texto-2);
+}
+.evolucion-leyenda i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 5px;
+}
+
+.calendario {
+  padding: 12px 12px 14px;
+}
+.calendario-fila {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.calendario-cabecera span {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--texto-3);
+}
+.cal-dia {
+  aspect-ratio: 1;
+  min-height: 34px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--relleno);
+  color: var(--texto-2);
+  transition: transform 0.15s;
+}
+.cal-dia:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.cal-dia.nivel-1 {
+  background: #ffe4ee;
+  color: var(--texto);
+}
+.cal-dia.nivel-2 {
+  background: var(--rosa-claro);
+  color: var(--texto);
+}
+.cal-dia.nivel-3 {
+  background: #ffc59e;
+  color: #7a3300;
+}
+.cal-dia.nivel-4 {
+  background: #ff8f80;
+  color: #fff;
+}
+.cal-dia:disabled {
+  background: transparent;
+  color: var(--texto-3);
+}
+.cal-dia.hoy {
+  box-shadow: inset 0 0 0 2px var(--rosa);
+}
+.cal-dia.sel {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--rosa);
+}
+
+/* ─── Bloqueo con código ──────────────────────────────────────────────────── */
+
+.candado-contenido {
+  height: 100%;
+}
+.bloqueo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: calc(var(--safe-top) + 16px) 24px calc(var(--safe-bottom) + 16px);
+  background:
+    radial-gradient(120% 60% at 100% 0%, #ffe0ec 0%, rgba(255, 224, 236, 0) 60%),
+    var(--fondo);
+}
+.bloqueo-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 26px;
+  display: grid;
+  place-items: center;
+  font-size: 46px;
+  background: linear-gradient(150deg, #ffe6f0, #ffc0d8);
+  box-shadow: var(--sombra);
+  margin-bottom: 8px;
+}
+.bloqueo-olvido {
+  margin-top: 8px;
+  font-size: 15px;
+}
+.codigo {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 16px;
+}
+.codigo-titulo {
+  font-family: var(--fuente-redonda);
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+}
+.codigo-mensaje {
+  font-size: 15px;
+  color: var(--texto-2);
+  min-height: 20px;
+  text-align: center;
+}
+.codigo-puntos {
+  display: flex;
+  gap: 18px;
+  margin: 18px 0 22px;
+}
+.codigo-puntos span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--rosa);
+  transition: background 0.15s;
+}
+.codigo-puntos span.lleno {
+  background: var(--rosa);
+}
+.codigo-puntos.agitar {
+  animation: sacudir 0.4s;
+}
+.teclado-codigo {
+  width: 100%;
+  gap: 12px 18px;
+}
+.teclado-codigo .tecla {
+  height: 64px;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  justify-self: center;
+  font-size: 28px;
+  background: #fff;
+  box-shadow: var(--sombra-suave);
+}
+.teclado-codigo .tecla:disabled {
+  opacity: 0.4;
+}
+
+/* ─── Perfil ──────────────────────────────────────────────────────────────── */
+
+button.perfil {
+  width: 100%;
+  text-align: left;
+}
+button.perfil > div {
+  flex: 1;
+  min-width: 0;
+}
+button.perfil > svg {
+  color: var(--texto-3);
+}
+
+/* ─── Modo privado: importes difuminados ──────────────────────────────────── */
+
+.privado :is(
+    .hero-cifra,
+    .hero-flujo strong,
+    .hero-cifra-media,
+    .hero-mini,
+    .hero-detalle,
+    .meta-cifras,
+    .meta-pie,
+    .fila-valor,
+    .limite-cifras,
+    .limite-pie,
+    .grafico-valor,
+    .grafico-pie,
+    .estadisticas strong,
+    .resumen-nota,
+    .comparativa-cabecera strong,
+    .comparativa small,
+    .analisis-resumen strong,
+    .prevision-cifra,
+    .prevision-detalle,
+    .consejo p,
+    .cierre-titulo .texto-rosa,
+    .cierre-detalle,
+    .chip small,
+    .registro-cat-resto,
+    .seccion-cabecera > span,
+    .hoja-resumen,
+    .importe
+  ) {
+  filter: blur(7px);
+  user-select: none;
+}
+
+/* ─── Pantalla de recuperación (si algo falla al pintar) ──────────────────── */
+
+.recuperacion {
+  min-height: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
+  text-align: center;
+}
+.recuperacion h1 {
+  font-family: var(--fuente-redonda);
+  font-size: 26px;
+  font-weight: 800;
+}
+.recuperacion p {
+  color: var(--texto-2);
+  margin-bottom: 8px;
+}
+.recuperacion .boton-secundario {
+  width: 100%;
+}
+.recuperacion-detalle {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--texto-3);
+  overflow-wrap: anywhere;
 }
